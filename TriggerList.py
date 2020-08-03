@@ -33,3 +33,14 @@ FakeRateJetTriggers = [
     ]
 
 FakeRateMuTrigger = 'HLT_Mu50'
+
+
+Filters = [
+    'Flag_goodVertices',
+    'Flag_globalSuperTightHalo2016Filter',
+    'Flag_HBHENoiseIsoFilter',
+    'Flag_HBHENoiseFilter',
+    'Flag_EcalDeadCellTriggerPrimitiveFilter',
+    'Flag_eeBadScFilter',
+    'Flag_BadPFMuonFilter'
+    ]
