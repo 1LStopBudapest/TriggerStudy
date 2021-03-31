@@ -2,6 +2,10 @@ import ROOT
 import math
 import os, sys
 
+sys.path.append('../')
+from Helper.VarCalc import *
+
+
 class TrigVarSel():
 
     def __init__(self, tr, sample):
@@ -34,7 +38,9 @@ class TrigVarSel():
 
         else: return False
 
-
+    def passfilters(self):
+        return (self.tr.Flag_goodVertices if hasattr(self.tr, 'Flag_goodVertices') else True) and (self.tr.Flag_globalSuperTightHalo2016Filter if hasattr(self.tr, 'Flag_globalSuperTightHalo2016Filter') else True) and (self.tr.Flag_HBHENoiseFilter if hasattr(self.tr, 'Flag_HBHENoiseFilter') else True) and (self.tr.Flag_HBHENoiseIsoFilter if hasattr(self.tr, 'Flag_HBHENoiseIsoFilter') else True) and (self.tr.Flag_EcalDeadCellTriggerPrimitiveFilter if hasattr(self.tr, 'Flag_EcalDeadCellTriggerPrimitiveFilter') else True) and (self.tr.Flag_BadPFMuonFilter if hasattr(self.tr, 'Flag_BadPFMuonFilter') else True) and (self.tr.Flag_eeBadScFilter if hasattr(self.tr, 'Flag_eeBadScFilter') else True)
+        
     def passFakeRateJetTrig(self):
         return (self.tr.HLT_PFHT800 if hasattr(self.tr, 'HLT_PFHT800') else False) or (self.tr.HLT_PFJet450 if hasattr(self.tr, 'HLT_PFJet450') else False) or (self.tr.HLT_AK8PFJet450 if hasattr(self.tr, 'HLT_AK8PFJet450') else False)
                                                                                                                                                                 
@@ -42,22 +48,97 @@ class TrigVarSel():
         return self.tr.HLT_Mu50 if hasattr(self.tr, 'HLT_Mu50') else False
                                                                                                                                                                 
 
-    def Elecut(self, thr=30):
-        return self.tr.Electron_pt[self.selectEleIdx()[0]]>thr if len(self.selectEleIdx()) else False
+    def getEleVar(self, eId):
+        Llist = []
+        for id in eId:
+            Llist.append({'pt':self.tr.Electron_pt[id], 'eta':self.tr.Electron_eta[id], 'phi':self.tr.Electron_phi[id], 'mass':self.tr.Electron_mass[id], 'idx': id})
+        return sortedlist(Llist)
+
+    def getMuVar(self, muId):
+        Llist = []
+        for id in muId:
+            Llist.append({'pt':self.tr.Muon_pt[id], 'eta':self.tr.Muon_eta[id], 'phi':self.tr.Muon_phi[id], 'mass':self.tr.Muon_mass[id], 'idx': id})
+        return sortedlist(Llist)
+    
+    def getLepVar(self, muId, eId):
+        Llist = []
+        for id in muId:
+            Llist.append({'pt':self.tr.Muon_pt[id], 'eta':self.tr.Muon_eta[id], 'phi':self.tr.Muon_phi[id], 'mass':self.tr.Muon_mass[id], 'idx': id})
+        for id in eId:
+            Llist.append({'pt':self.tr.Electron_pt[id], 'eta':self.tr.Electron_eta[id], 'phi':self.tr.Electron_phi[id], 'mass':self.tr.Electron_mass[id], 'idx': id})
+        return sortedlist(Llist)
+
+
+    def Elecut(self, thr=30, IdOpt='tight'):
+        eid = self.EleIDconv(IdOpt)
+        ele = self.getEleVar(self.selectEleIdx(eid))
+        return ele[0]['pt'] > thr if len(ele) else False
         
-    def selectEleIdx(self):
+    def Mucut(self, thr=30, IdOpt='tight'):
+        Mu = self.getMuVar(self.selectMuIdx(IdOpt))
+        return Mu[0]['pt'] > thr if len(Mu) else False
+
+    def Lepcut(self, lep):
+        return self.Elecut() if 'Ele' in lep else self.Mucut()
+    
+    def XtraLepVeto(self, lep, thr=10, IdOpt='loose'):
+        cut = True
+        eid = self.EleIDconv(IdOpt)
+        if 'Ele' in lep:
+            lid = self.getEleVar(self.selectEleIdx(4))[0]['idx'] # assuming this fun applied after Elecut
+            eleidx = self.selectEleIdx(eid)
+            eleidx.remove(lid)
+            lepvar = self.getLepVar(self.selectMuIdx(IdOpt), eleidx)
+            if len(lepvar) and lepvar[0]['pt']>thr:
+                cut = False
+        if 'Mu' in lep:
+            lid = getEleVar(selectMuIdx('tight'))[0]['idx'] # assuming this fun applied after Mucut
+            muidx = self.selectMuIdx(IdOpt)
+            muidx.remove(lid)
+            lepvar = self.getLepVar(muidx, self.selectEleIdx(eid))
+            if len(lepvar) and lepvar[0]['pt']>thr:
+                cut = False
+        return cut
+            
+    def selectEleIdx(self, IdOpt):
         idx = []
         for i in range(len(self.tr.Electron_pt)):
-            if self.tr.Electron_pt[i]>5 and abs(self.tr.Electron_eta[i])<2.5:
+            if self.eleSelector(pt=self.tr.Electron_pt[i], eta=self.tr.Electron_eta[i], deltaEtaSC=self.tr.Electron_deltaEtaSC[i], iso=self.tr.Electron_pfRelIso03_all[i], dxy=self.tr.Electron_dxy[i], dz=self.tr.Electron_dz[i], Id=self.tr.Electron_cutBased_Fall17_V1[i], idopt=IdOpt):
+                idx.append(i)
+        return idx
+    
+    def selectMuIdx(self, IdOpt):
+        idx = []
+        for i in range(len(self.tr.Muon_pt)):
+            if self.muonSelector(pt=self.tr.Muon_pt[i], eta=self.tr.Muon_eta[i], iso=self.tr.Muon_pfRelIso03_all[i], dxy=self.tr.Muon_dxy[i], dz=self.tr.Muon_dz[i], Id = self.tr.Muon_tightId[i] if 'tight' in IdOpt else self.tr.Muon_looseId[i] if 'loose' in IdOpt else self.tr.Muon_mediumId[i]):
                 idx.append(i)
         return idx
 
-    def Mucut(self, thr=30):
-        return self.tr.Muon_pt[self.selectMuIdx()[0]]>thr if len(self.selectMuIdx()) else False
+
+    def eleSelector(self, pt, eta, deltaEtaSC, iso, dxy, dz, Id, idopt):
+        return pt > 5 \
+            and abs(eta)       < 2.5 \
+            and (abs(eta+deltaEtaSC)<1.4442 or abs(eta+deltaEtaSC)>1.566) \
+            and (iso) < 0.2 \
+            and abs(dxy)       < 0.02 \
+            and abs(dz)        < 0.1 \
+            and self.eleID(Id, idopt) #cutbased id: 0:fail, 1:veto, 2:loose, 3:medium, 4:tight    
     
-    def selectMuIdx(self):
-        idx = []
-        for i in range(len(self.tr.Muon_pt)):
-            if self.tr.Muon_pt[i]>3.5 and abs(self.tr.Muon_eta[i])<2.4 and self.tr.Muon_isPFcand[i] and (self.tr.Muon_isGlobal[i] or self.tr.Muon_isTracker[i]):
-                idx.append(i)
-        return idx
+    def muonSelector( self, pt, eta, iso, dxy, dz, Id):
+        return pt > 3.5 \
+            and abs(eta)       < 2.4 \
+            and (iso) < 1.5 \
+	    and abs(dxy)       < 0.02 \
+            and abs(dz)        < 0.1 \
+            and Id
+
+    def eleID(self, idval, idtype):
+        return idval >= idtype
+
+    def EleIDconv(self, idopt):
+        eid = 0
+        if 'tight' in idopt : eid = 4
+        if 'medium' in idopt : eid = 3
+        if 'loose' in idopt : eid = 2
+        if 'veto' in idopt : eid = 1
+        return eid
