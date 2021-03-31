@@ -10,7 +10,7 @@ from Sample.SampleChain import SampleChain
 from Sample.Dir import plotDir
 from Helper.HistInfo import HistInfo
 from Helper.TreeVarSel import TreeVarSel
-
+from Sample.FileList_2016 import samples as samples_2016
 
 def get_parser():
     ''' Argument parser.
@@ -37,22 +37,34 @@ nEvents = options.nevents
 year = options.year
 
 isData = True if ('Run' in samples or 'Data' in samples) else False
+DataLumi=1.0
 
+if year==2016:
+    samplelist = samples_2016
+    DataLumi = SampleChain.luminosity_2016
+elif year==2017:
+    samplelist = samples_2017
+    DataLumi = SampleChain.luminosity_2017
+else:
+    samplelist = samples_2018
+    DataLumi = SampleChain.luminosity_2018
+
+    
 denTrig = SingleEleTrigger if 'Electron' in channel else SingleMuTrigger
 lepOpt = 'Ele' if 'Electron' in channel else 'Mu'
 
 numTrigHist = dict((key, 'hMET_'+key) for key in METTriggers)
 
-if isinstance(SampleChain.samplelist[samples][0], types.ListType):
-    for s in SampleChain.samplelist[samples]:
-        sample = list(SampleChain.samplelist.keys())[list(SampleChain.samplelist.values()).index(s)]
+if isinstance(samplelist[samples][0], types.ListType):
+    histext = samples
+    for s in samplelist[samples]:
+        sample = list(samplelist.keys())[list(samplelist.values()).index(s)]
         print 'running over: ', sample
         hfile = ROOT.TFile( 'TrigHist_'+sample+'_%i_%i'%(options.startfile+1, options.startfile + options.nfiles)+'.root', 'RECREATE')
         histos = {}
-        ext = samples[0:samples.find('_')] if options.pJobs else samples
         for key in numTrigHist:
-            histos[numTrigHist[key]+'_den'] = HistInfo(hname = numTrigHist[key]+'_den', sample = ext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
-            histos[numTrigHist[key]+'_num'] = HistInfo(hname = numTrigHist[key]+'_num', sample = ext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
+            histos[numTrigHist[key]+'_den'] = HistInfo(hname = numTrigHist[key]+'_den', sample = histext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
+            histos[numTrigHist[key]+'_num'] = HistInfo(hname = numTrigHist[key]+'_num', sample = histext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
         
         ch = SampleChain(sample, options.startfile, options.nfiles).getchain()
         print 'Total events of selected files of the', sample, 'sample: ', ch.GetEntries()
@@ -67,8 +79,9 @@ if isinstance(SampleChain.samplelist[samples][0], types.ListType):
             presel = getSel.ISRcut(100) and getSel.HTcut(200)
             getTrig = TrigVarSel(ch, sample)
             #Single lep Selection
-            lepsel = getTrig.Elecut(30) if 'Electron' in channel else getTrig.Mucut(30)
-            if presel and lepsel:
+            lepsel = getTrig.Lepcut(lepOpt) and getTrig.XtraLepVeto(lepOpt)
+            filtrsel = getTrig.passfilters()
+            if presel and lepsel and filtrsel:
                 for trig, hist in numTrigHist.items():
                     #den trig cut
                     if(getTrig.passLepTrig(denTrig, lepOpt)):
@@ -79,14 +92,16 @@ if isinstance(SampleChain.samplelist[samples][0], types.ListType):
             
         hfile.Write()
 else:
+    histext = samples
+    for l in list(samplelist.values()):
+        if samplelist[samples] in l: histext = list(samplelist.keys())[list(samplelist.values()).index(l)]
     sample = samples
     print 'running over: ', sample
     hfile = ROOT.TFile( 'TrigHist_'+sample+'_%i_%i'%(options.startfile+1, options.startfile + options.nfiles)+'.root', 'RECREATE')
     histos = {}
-    ext = sample[0:sample.find('_')] if options.pJobs else sample 
     for key in numTrigHist:
-        histos[numTrigHist[key]+'_den'] = HistInfo(hname = numTrigHist[key]+'_den', sample = ext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
-        histos[numTrigHist[key]+'_num'] = HistInfo(hname = numTrigHist[key]+'_num', sample = ext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
+        histos[numTrigHist[key]+'_den'] = HistInfo(hname = numTrigHist[key]+'_den', sample = histext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
+        histos[numTrigHist[key]+'_num'] = HistInfo(hname = numTrigHist[key]+'_num', sample = histext, binning=[100,0,500], histclass = ROOT.TH1F).make_hist()
     
     ch = SampleChain(sample, options.startfile, options.nfiles).getchain()
     print 'Total events of selected files of the', sample, 'sample: ', ch.GetEntries()
@@ -101,7 +116,8 @@ else:
         presel = getSel.ISRcut(100) and getSel.HTcut(200)
         getTrig = TrigVarSel(ch, sample)
         #Single lep Selection
-        lepsel = getTrig.Elecut(30) if 'Electron' in channel else getTrig.Mucut(30)
+        lepsel = getTrig.Lepcut(lepOpt) and getTrig.XtraLepVeto(lepOpt)
+        filtrsel = getTrig.passfilters()
         if presel and lepsel:
             for trig, hist in numTrigHist.items():
                 #den trig cut
