@@ -127,7 +127,7 @@ class TrigVarSel():
     def muonSelector( self, pt, eta, iso, dxy, dz, Id):
         return pt > 3.5 \
             and abs(eta)       < 2.4 \
-            and (iso) < 1.5 \
+            and (iso) < 0.15 \
 	    and abs(dxy)       < 0.02 \
             and abs(dz)        < 0.1 \
             and Id
