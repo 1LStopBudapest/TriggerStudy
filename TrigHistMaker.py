@@ -75,9 +75,8 @@ if isinstance(samplelist[samples][0], types.ListType):
             if ientry > nevtcut: break
             if ientry % (nevtcut/10)==0 : print 'processing ', ientry,'th event'
             ch.GetEntry(ientry)
-            getSel = TreeVarSel(ch, isData, year)
-            presel = getSel.ISRcut(100) and getSel.HTcut(200)
             getTrig = TrigVarSel(ch, sample)
+            presel = getTrig.ISRcut(100) and getTrig.HTcut(200)
             #Single lep Selection
             lepsel = getTrig.Lepcut(lepOpt) and getTrig.XtraLepVeto(lepOpt)
             filtrsel = getTrig.passfilters()
@@ -112,13 +111,16 @@ else:
         if ientry > nevtcut: break
         if nevtcut>10 and ientry % (nevtcut/10)==0 : print 'processing ', ientry,'th event'
         ch.GetEntry(ientry)
-        getSel = TreeVarSel(ch, isData, year)
-        presel = getSel.ISRcut(100) and getSel.HTcut(200)
         getTrig = TrigVarSel(ch, sample)
+        presel = getTrig.ISRcut(100) and getTrig.HTcut(200)
         #Single lep Selection
         lepsel = getTrig.Lepcut(lepOpt) and getTrig.XtraLepVeto(lepOpt)
         filtrsel = getTrig.passfilters()
-        if presel and lepsel:
+        if presel and lepsel and filtrsel:
+            if len(getTrig.selectMuIdx('loose')):
+                for i in getTrig.getMuVar(getTrig.selectMuIdx('loose')):
+                    if i['pt'] > 10:print getTrig.getMuVar(getTrig.selectMuIdx('loose'))
+
             for trig, hist in numTrigHist.items():
                 #den trig cut
                 if(getTrig.passLepTrig(denTrig, lepOpt)):
