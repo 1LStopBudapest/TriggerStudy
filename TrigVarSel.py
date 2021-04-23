@@ -47,7 +47,8 @@ class TrigVarSel():
     def passFakeRateMuTrig(self):
         return self.tr.HLT_Mu50 if hasattr(self.tr, 'HLT_Mu50') else False
                                                                                                                                                                 
-
+    ##Event object selection
+    
     def getEleVar(self, eId):
         Llist = []
         for id in eId:
@@ -85,14 +86,14 @@ class TrigVarSel():
         cut = True
         eid = self.EleIDconv(IdOpt)
         if 'Ele' in lep:
-            lid = self.getEleVar(self.selectEleIdx(4))[0]['idx'] # assuming this fun applied after Elecut
+            lid = self.getEleVar(self.selectEleIdx(4))[0]['idx'] # assuming this func applied after Elecut
             eleidx = self.selectEleIdx(eid)
             eleidx.remove(lid)
             lepvar = self.getLepVar(self.selectMuIdx(IdOpt), eleidx)
             if len(lepvar) and lepvar[0]['pt']>thr:
                 cut = False
         if 'Mu' in lep:
-            lid = getEleVar(selectMuIdx('tight'))[0]['idx'] # assuming this fun applied after Mucut
+            lid = getMuVar(selectMuIdx('tight'))[0]['idx'] # assuming this func applied after Mucut
             muidx = self.selectMuIdx(IdOpt)
             muidx.remove(lid)
             lepvar = self.getLepVar(muidx, self.selectEleIdx(eid))
@@ -142,3 +143,48 @@ class TrigVarSel():
         if 'loose' in idopt : eid = 2
         if 'veto' in idopt : eid = 1
         return eid
+
+
+    def ISRcut(self, thr=100):
+        return len(self.selectjetIdx(thr)) > 0
+
+    def METcut(self, thr=200):
+        cut = False
+        if self.tr.MET_pt > thr:
+            cut = True
+        return cut
+        
+    def HTcut(self, thr=300):
+        cut = False
+        HT = self.calHT()
+        if HT > thr:
+            cut = True
+        return cut
+
+    def calHT(self):
+        HT = 0
+        for i in self.selectjetIdx(30):
+            HT = HT + self.tr.Jet_pt[i]
+        return HT
+
+
+    def selectjetIdx(self, thrsld):
+        lepvar = sortedlist(self.getLepVar(self.selectMuIdx(), self.selectEleIdx()))
+        idx = []
+        d = {}
+        for j in range(len(self.tr.Jet_pt)):
+            clean = False
+            if self.tr.Jet_pt[j] > thrsld and abs(self.tr.Jet_eta[j]) < 2.4 and self.tr.Jet_jetId[j] > 0:
+                clean = True
+                for l in range(len(lepvar)):
+                    dR = DeltaR(lepvar[l]['eta'], lepvar[l]['phi'], self.tr.Jet_eta[j], self.tr.Jet_phi[j])
+                    ptRatio = float(self.tr.Jet_pt[j])/float(lepvar[l]['pt'])
+                    if dR < 0.4 and ptRatio < 2:
+                        clean = False
+                        break
+                if clean:
+                    d[self.tr.Jet_pt[j]] = j
+        od = coll.OrderedDict(sorted(d.items(), reverse=True))
+        for jetpt in od:
+            idx.append(od[jetpt])
+        return idx
