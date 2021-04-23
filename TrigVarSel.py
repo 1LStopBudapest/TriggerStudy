@@ -1,6 +1,7 @@
 import ROOT
 import math
 import os, sys
+import collections as coll
 
 sys.path.append('../')
 from Helper.VarCalc import *
@@ -169,7 +170,7 @@ class TrigVarSel():
 
 
     def selectjetIdx(self, thrsld):
-        lepvar = sortedlist(self.getLepVar(self.selectMuIdx(), self.selectEleIdx()))
+        lepvar = sortedlist(self.getLepVar(self.selectMuIdx('tight'), self.selectEleIdx('tight')))
         idx = []
         d = {}
         for j in range(len(self.tr.Jet_pt)):
