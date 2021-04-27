@@ -88,16 +88,16 @@ class TrigVarSel():
         eid = self.EleIDconv(IdOpt)
         if 'Ele' in lep:
             lid = self.getEleVar(self.selectEleIdx(4))[0]['idx'] # assuming this func applied after Elecut
-            eleidx = self.selectEleIdx(eid)
+            eleidx = self.selectVetoEleIdx(eid)
             eleidx.remove(lid)
-            lepvar = self.getLepVar(self.selectMuIdx(IdOpt), eleidx)
+            lepvar = self.getLepVar(self.selectVetoMuIdx(IdOpt), eleidx)
             if len(lepvar) and lepvar[0]['pt']>thr:
                 cut = False
         if 'Mu' in lep:
             lid = getMuVar(selectMuIdx('tight'))[0]['idx'] # assuming this func applied after Mucut
-            muidx = self.selectMuIdx(IdOpt)
+            muidx = self.selectVetoMuIdx(IdOpt)
             muidx.remove(lid)
-            lepvar = self.getLepVar(muidx, self.selectEleIdx(eid))
+            lepvar = self.getLepVar(muidx, self.selectVetoEleIdx(eid))
             if len(lepvar) and lepvar[0]['pt']>thr:
                 cut = False
         return cut
@@ -116,6 +116,20 @@ class TrigVarSel():
                 idx.append(i)
         return idx
 
+    def selectVetoEleIdx(self, IdOpt):
+        idx = []
+        for i in range(len(self.tr.Electron_pt)):
+            if self.tr.Electron_pt[i] > 5.0 and abs(self.tr.Electron_eta[i]) < 2.5 and (abs(self.tr.Electron_eta[i] + self.tr.Electron_deltaEtaSC[i]) < 1.4442 or abs(self.tr.Electron_eta[i] + self.tr.Electron_deltaEtaSC[i]) > 1.566 ) and self.eleID(self.tr.Electron_cutBased_Fall17_V1[i], IdOpt):
+                idx.append(i)
+        return idx
+
+    def selectVetoMuIdx(self, IdOpt):
+        idx = []
+        for i in range(len(self.tr.Muon_pt)):
+            mid = self.tr.Muon_tightId[i] if 'tight' in IdOpt else self.tr.Muon_looseId[i] if 'loose' in IdOpt else self.tr.Muon_mediumId[i]
+            if self.tr.Muon_pt[i]>3.5 and abs(self.tr.Muon_eta[i])<2.4 and mid:
+                idx.append(i)
+        return idx
 
     def eleSelector(self, pt, eta, deltaEtaSC, iso, dxy, dz, Id, idopt):
         return pt > 5 \

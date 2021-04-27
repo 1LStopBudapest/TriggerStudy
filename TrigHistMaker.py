@@ -17,7 +17,7 @@ def get_parser():
     '''
     import argparse
     argParser = argparse.ArgumentParser(description = "Argument parser")
-    argParser.add_argument('--sample',           action='store',                     type=str,            default='SingleElectron_Data',                                help="Which sample?" )
+    argParser.add_argument('--sample',           action='store',                     type=str,            default='Trig',                                help="Which sample?" )
     argParser.add_argument('--year',             action='store',                     type=int,            default=2016,                                             help="Which year?" )
     argParser.add_argument('--channel',             action='store',                  type=str,            default='SingleElectron',                                   help="Which dataset?" )
     argParser.add_argument('--startfile',        action='store',                     type=int,            default=0,                                                help="start from which root file like 0th or 10th etc?" )
@@ -117,10 +117,6 @@ else:
         lepsel = getTrig.Lepcut(lepOpt) and getTrig.XtraLepVeto(lepOpt)
         filtrsel = getTrig.passfilters()
         if presel and lepsel and filtrsel:
-            if len(getTrig.selectMuIdx('loose')):
-                for i in getTrig.getMuVar(getTrig.selectMuIdx('loose')):
-                    if i['pt'] > 10:print getTrig.getMuVar(getTrig.selectMuIdx('loose'))
-
             for trig, hist in numTrigHist.items():
                 #den trig cut
                 if(getTrig.passLepTrig(denTrig, lepOpt)):
