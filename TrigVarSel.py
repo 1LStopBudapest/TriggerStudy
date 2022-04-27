@@ -61,6 +61,17 @@ class TrigVarSel():
     def passFakeRateEleTrig_TL_orTrig(self):
         return (self.tr.HLT_PFJet40 if hasattr(self.tr, 'HLT_PFJet40') else False) or (self.tr.HLT_Ele8_CaloIdM_TrackIdM_PFJet30 if hasattr(self.tr, 'HLT_Ele8_CaloIdM_TrackIdM_PFJet30') else False) or (self.tr.HLT_Ele17_CaloIdM_TrackIdM_PFJet30 if hasattr(self.tr, 'HLT_Ele17_CaloIdM_TrackIdM_PFJet30') else False) or (self.tr.HLT_Ele23_CaloIdM_TrackIdM_PFJet30 if hasattr(self.tr, 'HLT_Ele23_CaloIdM_TrackIdM_PFJet30') else False)
 
+    def passFRTrig(self, trig):
+        if trig=='HLT_Mu3_PFJet40' and hasattr(self.tr, 'HLT_Mu3_PFJet40'): return self.tr.HLT_Mu3_PFJet40
+        if trig=='HLT_Mu8' and hasattr(self.tr, 'HLT_Mu8'): return self.tr.HLT_Mu8
+        if trig=='HLT_Mu17' and hasattr(self.tr, 'HLT_Mu17'): return self.tr.HLT_Mu17
+        if trig=='HLT_Mu27' and hasattr(self.tr, 'HLT_Mu27'): return self.tr.HLT_Mu27
+        if trig=='HLT_PFJet40' and hasattr(self.tr, 'HLT_PFJet40'): return self.tr.HLT_PFJet40
+        if trig=='HLT_Ele8_CaloIdM_TrackIdM_PFJet30' and hasattr(self.tr, 'HLT_Ele8_CaloIdM_TrackIdM_PFJet30'): return self.tr.HLT_Ele8_CaloIdM_TrackIdM_PFJet30
+        if trig=='HLT_Ele17_CaloIdM_TrackIdM_PFJet30' and hasattr(self.tr, 'HLT_Ele17_CaloIdM_TrackIdM_PFJet30'): return self.tr.HLT_Ele17_CaloIdM_TrackIdM_PFJet30
+        if trig=='HLT_Ele23_CaloIdM_TrackIdM_PFJet30' and hasattr(self.tr, 'HLT_Ele23_CaloIdM_TrackIdM_PFJet30'): return self.tr.HLT_Ele23_CaloIdM_TrackIdM_PFJet30
+        else: return False
+        
     def passFakeRateLepTrig_APPregion(self,  lep):
         return self.passFakeRateEleTrig_APPregion() if lep=='Ele' else self.passFakeRateMuTrig_APPregion()
 
